@@ -1,8 +1,62 @@
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 
-// Path to the MCP server project
-const MCP_SERVER_PATH = '/Users/stephanchiorean/Documents/projects/blueKitApps/blueKitMcp';
+interface McpServerConfig {
+  command: string;
+  args: string[];
+  cwd?: string;
+}
+
+/**
+ * Get MCP server configuration, checking project-level bluekit.config.json first,
+ * then falling back to ~/.bluekit/config.json
+ */
+function getMcpServerConfig(projectRoot: string = process.cwd()): McpServerConfig {
+  const projectConfigPath = path.join(projectRoot, 'bluekit.config.json');
+  const userConfigPath = path.join(os.homedir(), '.bluekit', 'config.json');
+
+  // 1) Try project-level config first
+  if (fs.existsSync(projectConfigPath)) {
+    try {
+      const configContent = fs.readFileSync(projectConfigPath, 'utf-8');
+      const config = JSON.parse(configContent);
+      if (!config.mcp) {
+        throw new Error(`Missing 'mcp' entry in ${projectConfigPath}`);
+      }
+      return config.mcp;
+    } catch (error: any) {
+      throw new Error(`Failed to load config from ${projectConfigPath}: ${error.message}`);
+    }
+  }
+
+  // 2) Try global ~/.bluekit/config.json
+  if (fs.existsSync(userConfigPath)) {
+    try {
+      const configContent = fs.readFileSync(userConfigPath, 'utf-8');
+      const config = JSON.parse(configContent);
+      if (!config.mcp) {
+        throw new Error(`Missing 'mcp' entry in ${userConfigPath}`);
+      }
+      return config.mcp;
+    } catch (error: any) {
+      throw new Error(`Failed to load config from ${userConfigPath}: ${error.message}`);
+    }
+  }
+
+  // 3) If neither exists, create the user-level config automatically
+  const defaultConfig = {
+    mcp: {
+      command: 'bluekit-mcp',
+      args: [],
+    },
+  };
+
+  fs.mkdirSync(path.dirname(userConfigPath), { recursive: true });
+  fs.writeFileSync(userConfigPath, JSON.stringify(defaultConfig, null, 2), 'utf-8');
+  return defaultConfig.mcp;
+}
 
 /**
  * Call a BlueKit MCP tool by spawning the MCP server directly
@@ -14,11 +68,25 @@ export async function callCursorTool(
   args: any
 ): Promise<any> {
   return new Promise((resolve, reject) => {
-    // Spawn the MCP server process
-    const mcpProcess = spawn('npx', ['tsx', 'src/main.ts'], {
-      cwd: MCP_SERVER_PATH,
+    // Get MCP server configuration
+    let mcpConfig: McpServerConfig;
+    try {
+      mcpConfig = getMcpServerConfig();
+    } catch (error: any) {
+      reject(new Error(`Failed to load MCP server config: ${error.message}`));
+      return;
+    }
+    
+    // Spawn the MCP server process using config
+    const spawnOptions: any = {
       stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    };
+    
+    if (mcpConfig.cwd) {
+      spawnOptions.cwd = mcpConfig.cwd;
+    }
+    
+    const mcpProcess = spawn(mcpConfig.command, mcpConfig.args, spawnOptions);
 
     let stdoutBuffer = '';
     let requestId: number | null = null;
