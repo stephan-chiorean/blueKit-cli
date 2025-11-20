@@ -1,0 +1,32 @@
+{
+  "name": "bluekit-cli",
+  "version": "0.1.0",
+  "description": "Minimal MCP-driven CLI for BlueKit",
+  "bin": {
+    "bluekit": "./bin/run"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "oclif": {
+    "commands": "./dist/commands",
+    "bin": "bluekit",
+    "plugins": []
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@oclif/core": "^3",
+    "yaml": "^2"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "ts-node": "^10",
+    "@types/node": "^20"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
+

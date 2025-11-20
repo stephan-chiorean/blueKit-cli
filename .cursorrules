@@ -1,0 +1,4 @@
+definitions:
+  BlueKit:
+    description: >
+      See docs/bluekit-definition.md for the complete BlueKit definition.
