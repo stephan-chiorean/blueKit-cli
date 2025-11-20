@@ -8,6 +8,79 @@ A minimal, MCP-driven command-line interface for BlueKit that forwards commands 
 npm link
 ```
 
+## MCP Server Setup
+
+The BlueKit CLI communicates with the BlueKit MCP Server through Cursor's MCP bridge. You can configure the MCP server either globally or per-project.
+
+### Option 1: Per-Project Configuration (Recommended)
+
+Create a `.cursor/mcp.json` file in your project root:
+
+```json
+{
+  "mcpServers": {
+    "bluekit": {
+      "command": "node",
+      "args": ["path/to/bluekit-mcp-server/index.js"],
+      "env": {}
+    }
+  }
+}
+```
+
+**How it works:**
+- The CLI connects to Cursor's global bridge socket (`~/.cursor/mcp/bridge.sock`)
+- The CLI sends the `projectPath` in the request arguments
+- Cursor's bridge uses the project's `.cursor/mcp.json` to route to the BlueKit MCP server
+- Each project can have its own MCP server configuration
+
+### Option 2: Global Configuration
+
+Alternatively, configure the MCP server globally in `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "bluekit": {
+      "command": "node",
+      "args": ["path/to/bluekit-mcp-server/index.js"],
+      "env": {}
+    }
+  }
+}
+```
+
+**How it works:**
+- The MCP server is configured once globally
+- Works for all projects
+- No need to create `.cursor/mcp.json` in each project
+
+### Requirements
+
+1. **Cursor must be running**: The bridge socket (`~/.cursor/mcp/bridge.sock`) is created by Cursor when it's running
+2. **MCP server configured**: Either per-project (`.cursor/mcp.json`) or globally (`~/.cursor/mcp.json`)
+3. **Project path**: The CLI automatically detects the current working directory and passes it to the MCP server
+
+### Test the Connection
+
+```bash
+bluekit ping
+```
+
+If the MCP server is configured correctly, you'll see a success message. If not, you'll see:
+```
+BlueKit CLI is working!
+Note: MCP server unavailable - MCP connection error: connect ENOENT /Users/.../.cursor/mcp/bridge.sock
+```
+
+### Important Notes
+
+- **Per-project config**: Create `.cursor/mcp.json` in each project root (Option 1)
+- **Global config**: Configure once in `~/.cursor/mcp.json` (Option 2)
+- **Cursor must be running**: The bridge socket only exists when Cursor is active
+- **Project path detection**: Commands operate on the current working directory (`process.cwd()`)
+- **No CLI config needed**: The CLI itself doesn't need any configuration - it just routes requests
+
 ## Usage
 
 ### `bluekit init`
