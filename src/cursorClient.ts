@@ -45,11 +45,48 @@ function getMcpServerConfig(projectRoot: string = process.cwd()): McpServerConfi
     }
   }
 
-  // 3) If neither exists, create the user-level config automatically
+  // 3) If neither exists, try to find the MCP server and create config automatically
+  // Try to find the MCP server in common locations
+  const possibleMcpPaths = [
+    // If CLI is in a monorepo, MCP server might be at ../blueKitMcp/dist/main.js (from CLI dist/)
+    path.resolve(__dirname, '../../blueKitMcp/dist/main.js'),
+    // If CLI is in a monorepo, MCP server might be at ../../blueKitMcp/dist/main.js (from CLI src/)
+    path.resolve(__dirname, '../../../blueKitMcp/dist/main.js'),
+    // If installed globally, might be in node_modules
+    path.resolve(__dirname, '../../node_modules/bluekit-mcp-server/dist/main.js'),
+    // Try relative to project root (where user runs the command)
+    path.resolve(projectRoot, '../blueKitMcp/dist/main.js'),
+    // Try in node_modules relative to project
+    path.resolve(projectRoot, 'node_modules/bluekit-mcp-server/dist/main.js'),
+    // Try absolute path from workspace root (if we can detect it)
+    path.resolve(projectRoot, '../../blueKitMcp/dist/main.js'),
+  ];
+
+  let mcpServerPath: string | null = null;
+  for (const mcpPath of possibleMcpPaths) {
+    if (fs.existsSync(mcpPath)) {
+      mcpServerPath = mcpPath;
+      break;
+    }
+  }
+
+  if (!mcpServerPath) {
+    throw new Error(
+      `Could not find BlueKit MCP server. Please create a config file at ${userConfigPath} or ${projectConfigPath} with:\n` +
+      `{\n` +
+      `  "mcp": {\n` +
+      `    "command": "node",\n` +
+      `    "args": ["/absolute/path/to/blueKitMcp/dist/main.js"]\n` +
+      `  }\n` +
+      `}\n` +
+      `\nOr build the MCP server first: cd blueKitMcp && npm run build`
+    );
+  }
+
   const defaultConfig = {
     mcp: {
-      command: 'bluekit-mcp',
-      args: [],
+      command: 'node',
+      args: [mcpServerPath],
     },
   };
 

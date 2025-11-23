@@ -2,24 +2,24 @@ import { Command } from '@oclif/core';
 import { callCursorTool } from '../cursorClient';
 import { resolveProjectPath } from '../config';
 
-export default class Generate extends Command {
-  static description = 'Generate BlueKit kits - plan + create all kits for this directory';
+export default class Plan extends Command {
+  static description = 'Plan BlueKit kits - analyze directory and build domain tree (no file generation)';
 
   static examples = [
-    '$ bluekit generate',
+    '$ bluekit plan',
   ];
 
   async run() {
-    await this.parse(Generate);
-    
+    await this.parse(Plan);
+
     try {
       const projectPath = resolveProjectPath();
 
-      this.log(`Sending generation command for directory: ${projectPath}\n`);
+      this.log(`Sending planning command for directory: ${projectPath}\n`);
 
       // Send intent message to Cursor via MCP
       const response = await callCursorTool('bluekit', 'receiveUserCommand', {
-        intent: '@bluekit/generate',
+        intent: '@bluekit/plan',
         cwd: projectPath,
       });
 
@@ -40,7 +40,7 @@ export default class Generate extends Command {
         this.log(response);
       }
     } catch (error: any) {
-      this.error(error.message || 'Failed to generate kits', { exit: 1 });
+      this.error(error.message || 'Failed to plan kits', { exit: 1 });
     }
   }
 }
