@@ -1,6 +1,6 @@
 # BlueKit CLI
 
-A minimal, MCP-driven command-line interface for BlueKit that forwards commands to the BlueKit MCP Server via Cursor.
+A minimal, MCP-driven command-line interface for BlueKit that forwards commands to the BlueKit MCP Server.
 
 ## Installation
 
@@ -10,56 +10,38 @@ npm link
 
 ## MCP Server Setup
 
-The BlueKit CLI communicates with the BlueKit MCP Server through Cursor's MCP bridge. You can configure the MCP server either globally or per-project.
+The BlueKit CLI communicates directly with the BlueKit MCP Server by spawning it as a subprocess and communicating via stdio JSON-RPC.
 
-### Option 1: Per-Project Configuration (Recommended)
+### Configuration
 
-Create a `.cursor/mcp.json` file in your project root:
+The CLI automatically finds the MCP server by checking:
 
+1. **Project-level config**: `bluekit.config.json` in your project root:
 ```json
 {
-  "mcpServers": {
-    "bluekit": {
-      "command": "node",
-      "args": ["path/to/bluekit-mcp-server/index.js"],
-      "env": {}
-    }
+  "mcp": {
+    "command": "node",
+    "args": ["/path/to/blueKitMcp/dist/main.js"]
   }
 }
 ```
 
-**How it works:**
-- The CLI connects to Cursor's global bridge socket (`~/.cursor/mcp/bridge.sock`)
-- The CLI sends the `projectPath` in the request arguments
-- Cursor's bridge uses the project's `.cursor/mcp.json` to route to the BlueKit MCP server
-- Each project can have its own MCP server configuration
-
-### Option 2: Global Configuration
-
-Alternatively, configure the MCP server globally in `~/.cursor/mcp.json`:
-
+2. **Global config**: `~/.bluekit/config.json`:
 ```json
 {
-  "mcpServers": {
-    "bluekit": {
-      "command": "node",
-      "args": ["path/to/bluekit-mcp-server/index.js"],
-      "env": {}
-    }
+  "mcp": {
+    "command": "node",
+    "args": ["/path/to/blueKitMcp/dist/main.js"]
   }
 }
 ```
 
-**How it works:**
-- The MCP server is configured once globally
-- Works for all projects
-- No need to create `.cursor/mcp.json` in each project
+3. **Auto-discovery**: If no config exists, the CLI will search common locations and create a config automatically.
 
 ### Requirements
 
-1. **Cursor must be running**: The bridge socket (`~/.cursor/mcp/bridge.sock`) is created by Cursor when it's running
-2. **MCP server configured**: Either per-project (`.cursor/mcp.json`) or globally (`~/.cursor/mcp.json`)
-3. **Project path**: The CLI automatically detects the current working directory and passes it to the MCP server
+1. **MCP server built**: The MCP server must be built (`cd blueKitMcp && npm run build`)
+2. **Project path**: The CLI automatically detects the current working directory and passes it to the MCP server
 
 ### Test the Connection
 
@@ -67,19 +49,12 @@ Alternatively, configure the MCP server globally in `~/.cursor/mcp.json`:
 bluekit ping
 ```
 
-If the MCP server is configured correctly, you'll see a success message. If not, you'll see:
-```
-BlueKit CLI is working!
-Note: MCP server unavailable - MCP connection error: connect ENOENT /Users/.../.cursor/mcp/bridge.sock
-```
+If the MCP server is configured correctly, you'll see a success message.
 
 ### Important Notes
 
-- **Per-project config**: Create `.cursor/mcp.json` in each project root (Option 1)
-- **Global config**: Configure once in `~/.cursor/mcp.json` (Option 2)
-- **Cursor must be running**: The bridge socket only exists when Cursor is active
 - **Project path detection**: Commands operate on the current working directory (`process.cwd()`)
-- **No CLI config needed**: The CLI itself doesn't need any configuration - it just routes requests
+- **Auto-config**: The CLI will automatically create a config file if it can find the MCP server
 
 ## Usage
 
@@ -130,7 +105,7 @@ bluekit ping
 The CLI performs **zero** domain logic. All orchestration, scanning, parsing, and code generation is handled by the BlueKit MCP Server. The CLI is only a thin request router that:
 
 1. Detects the project path
-2. Calls the MCP server via Cursor's socket (`~/.cursor/mcp/bridge.sock`)
+2. Spawns the MCP server process and communicates via stdio JSON-RPC
 3. Prints the response
 
 ## Development

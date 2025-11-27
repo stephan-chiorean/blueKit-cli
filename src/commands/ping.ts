@@ -1,5 +1,5 @@
 import { Command } from '@oclif/core';
-import { callCursorTool } from '../cursorClient';
+import { callMcpTool } from '../mcpClient';
 
 export default class Ping extends Command {
   static description = 'Health check for BlueKit CLI';
@@ -7,7 +7,7 @@ export default class Ping extends Command {
   async run() {
     try {
       // Try to ping the MCP server
-      const response = await callCursorTool('bluekit', 'ping', {});
+      const response = await callMcpTool('bluekit', 'ping', {});
       
       if (typeof response === 'string') {
         this.log(response);

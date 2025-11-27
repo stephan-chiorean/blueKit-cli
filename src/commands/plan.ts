@@ -1,5 +1,5 @@
 import { Command } from '@oclif/core';
-import { callCursorTool } from '../cursorClient';
+import { callMcpTool } from '../mcpClient';
 import { resolveProjectPath } from '../config';
 
 export default class Plan extends Command {
@@ -17,8 +17,8 @@ export default class Plan extends Command {
 
       this.log(`Sending planning command for directory: ${projectPath}\n`);
 
-      // Send intent message to Cursor via MCP
-      const response = await callCursorTool('bluekit', 'receiveUserCommand', {
+      // Send intent message to MCP server
+      const response = await callMcpTool('bluekit', 'receiveUserCommand', {
         intent: '@bluekit/plan',
         cwd: projectPath,
       });

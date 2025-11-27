@@ -1,5 +1,5 @@
 import { Command, Flags } from '@oclif/core';
-import { callCursorTool } from '../cursorClient';
+import { callMcpTool } from '../mcpClient';
 import { resolveProjectPath } from '../config';
 
 export default class Apply extends Command {
@@ -33,7 +33,7 @@ export default class Apply extends Command {
       
       this.log(`Applying instructions for project: ${projectPath}`);
       
-      const response = await callCursorTool('bluekit', 'apply_instructions', {
+      const response = await callMcpTool('bluekit', 'apply_instructions', {
         projectPath,
         flags: mcpFlags,
       });

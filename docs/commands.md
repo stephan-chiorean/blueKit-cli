@@ -4,7 +4,7 @@ Complete reference for all BlueKit CLI commands and their variations.
 
 ## Overview
 
-The BlueKit CLI is a minimal, MCP-driven interface that forwards commands to the BlueKit MCP Server via Cursor. All domain logic is handled by the MCP server; the CLI only routes requests and prints responses.
+The BlueKit CLI is a minimal, MCP-driven interface that forwards commands to the BlueKit MCP Server. All domain logic is handled by the MCP server; the CLI only routes requests and prints responses.
 
 ---
 
@@ -49,7 +49,7 @@ bluekit init --help
 ### MCP Request
 
 ```typescript
-callCursorTool("bluekit", "init_project", { projectPath })
+callMcpTool("bluekit", "init_project", { projectPath })
 ```
 
 ---
@@ -74,7 +74,7 @@ Sends an MCP request to generate kits and optionally create a root blueprint. Th
 - Kit generation
 - Optional root blueprint creation
 - Semantic analysis
-- Questions back to Cursor if needed
+- Interactive questioning if needed
 
 ### Flags
 
@@ -99,7 +99,7 @@ bluekit generate --help
 ### MCP Request
 
 ```typescript
-callCursorTool("bluekit", "generate_kits", { projectPath, flags })
+callMcpTool("bluekit", "generate_kits", { projectPath, flags })
 ```
 
 Where `flags` may include:
@@ -131,7 +131,7 @@ Sends an MCP request to apply instructions and generate code. The MCP server han
 - Values/locals merging
 - Interactive multi-step questioning
 - Generating final plan
-- Instructing Cursor to produce code
+- Generating code
 
 ### Flags
 
@@ -163,7 +163,7 @@ bluekit apply --help
 ### MCP Request
 
 ```typescript
-callCursorTool("bluekit", "apply_instructions", { projectPath, flags })
+callMcpTool("bluekit", "apply_instructions", { projectPath, flags })
 ```
 
 Where `flags` may include:
@@ -212,7 +212,7 @@ bluekit ping --help
 ### MCP Request
 
 ```typescript
-callCursorTool("bluekit", "ping", {})
+callMcpTool("bluekit", "ping", {})
 ```
 
 ---
@@ -249,6 +249,6 @@ bluekit <command> -h
 - All commands operate on the current working directory (`process.cwd()`)
 - All domain logic is handled by the BlueKit MCP Server
 - The CLI only routes requests and prints responses
-- MCP communication happens via `~/.cursor/mcp/bridge.sock`
-- Commands will fail if the MCP server is not running or the socket is unavailable (except `ping`, which gracefully handles this)
+- MCP communication happens by spawning the MCP server process and communicating via stdio JSON-RPC
+- Commands will fail if the MCP server is not found or cannot be started (except `ping`, which gracefully handles this)
 

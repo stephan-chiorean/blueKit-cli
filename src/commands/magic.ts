@@ -1,5 +1,5 @@
 import { Command } from '@oclif/core';
-import { callCursorTool } from '../cursorClient';
+import { callMcpTool } from '../mcpClient';
 import { getProjectPath } from '../config';
 
 export default class Magic extends Command {
@@ -10,7 +10,7 @@ export default class Magic extends Command {
       const directory = getProjectPath();
       
       // Call the MCP tool with the current directory
-      const response = await callCursorTool('bluekit', 'magic', { directory });
+      const response = await callMcpTool('bluekit', 'magic', { directory });
       
       // Extract the text content from the response
       if (response && response.content && Array.isArray(response.content)) {

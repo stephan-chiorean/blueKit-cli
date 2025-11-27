@@ -1,5 +1,5 @@
 import { Command } from '@oclif/core';
-import { callCursorTool } from '../cursorClient';
+import { callMcpTool } from '../mcpClient';
 import { resolveProjectPath } from '../config';
 
 export default class Generate extends Command {
@@ -17,8 +17,8 @@ export default class Generate extends Command {
 
       this.log(`Sending generation command for directory: ${projectPath}\n`);
 
-      // Send intent message to Cursor via MCP
-      const response = await callCursorTool('bluekit', 'receiveUserCommand', {
+      // Send intent message to MCP server
+      const response = await callMcpTool('bluekit', 'receiveUserCommand', {
         intent: '@bluekit/generate',
         cwd: projectPath,
       });

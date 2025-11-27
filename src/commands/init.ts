@@ -3,7 +3,7 @@ import * as readline from 'readline';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { callCursorTool } from '../cursorClient';
+import { callMcpTool } from '../mcpClient';
 import { resolveProjectPath } from '../config';
 
 export default class Init extends Command {
@@ -52,7 +52,7 @@ export default class Init extends Command {
       
       this.log(`Initializing BlueKit project at: ${projectPath}`);
       
-      const response = await callCursorTool('bluekit', 'init_project', {
+      const response = await callMcpTool('bluekit', 'init_project', {
         projectPath,
       });
       

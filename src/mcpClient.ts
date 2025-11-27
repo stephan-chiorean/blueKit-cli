@@ -99,7 +99,7 @@ function getMcpServerConfig(projectRoot: string = process.cwd()): McpServerConfi
  * Call a BlueKit MCP tool by spawning the MCP server directly
  * and communicating via stdio JSON-RPC
  */
-export async function callCursorTool(
+export async function callMcpTool(
   server: string,
   tool: string,
   args: any
@@ -237,3 +237,4 @@ export async function callCursorTool(
     }
   });
 }
+
