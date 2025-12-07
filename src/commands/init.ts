@@ -13,6 +13,22 @@ export default class Init extends Command {
     help: Flags.help({ char: 'h' }),
   };
 
+  private logBox(message: string, icon: string = '│') {
+    this.log(`│  ${icon} ${message}`);
+  }
+
+  private logHeader() {
+    this.log('\n┌  BlueKit CLI 🚀\n│');
+  }
+
+  private logFooter(success: boolean = true) {
+    if (success) {
+      this.log('└  🎉 Done!\n');
+    } else {
+      this.log('└  ❌ Failed\n');
+    }
+  }
+
   private async promptUser(question: string): Promise<string> {
     const rl = readline.createInterface({
       input: process.stdin,
@@ -31,26 +47,32 @@ export default class Init extends Command {
     const { flags } = await this.parse(Init);
     
     try {
+      this.logHeader();
+      
       const projectPath = resolveProjectPath();
       const bluekitDir = path.join(os.homedir(), '.bluekit');
       
       // Check if ~/.bluekit directory exists, prompt if not
       if (!fs.existsSync(bluekitDir)) {
+        this.logBox('BlueKit store directory (~/.bluekit) not found', '●');
+        this.log('│');
         const answer = await this.promptUser(
-          `\nThe BlueKit store directory (~/.bluekit) does not exist.\n` +
-          `Do you want to create it? (yes/no): `
+          `│  Do you want to create it? (yes/no): `
         );
         
         if (answer === 'yes' || answer === 'y') {
           fs.mkdirSync(bluekitDir, { recursive: true });
-          this.log(`✅ Created BlueKit store directory at ${bluekitDir}\n`);
+          this.logBox(`Created BlueKit store at ${bluekitDir}`, '✓');
         } else {
-          this.log('\nOperation cancelled. BlueKit store directory is required.');
+          this.logBox('Operation cancelled', '✗');
+          this.logFooter(false);
           this.exit(0);
         }
       }
       
-      this.log(`Initializing BlueKit project at: ${projectPath}`);
+      this.logBox(`Initializing project at: ${projectPath}`, '●');
+      this.log('│');
+      this.logBox('Writing project configuration', '◇');
       
       const response = await callMcpTool('bluekit', 'init_project', {
         projectPath,
@@ -58,16 +80,19 @@ export default class Init extends Command {
       
       // Print whatever the MCP returns
       if (typeof response === 'string') {
-        this.log(response);
+        this.logBox(response, '│');
       } else if (response && response.message) {
-        this.log(response.message);
+        this.logBox(response.message, '│');
         if (response.data) {
-          this.log(JSON.stringify(response.data, null, 2));
+          this.logBox(JSON.stringify(response.data, null, 2), '│');
         }
       } else {
-        this.log(JSON.stringify(response, null, 2));
+        this.logBox(JSON.stringify(response, null, 2), '│');
       }
+      
+      this.logFooter(true);
     } catch (error: any) {
+      this.logFooter(false);
       this.error(error.message || 'Failed to initialize project', { exit: 1 });
     }
   }
