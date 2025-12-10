@@ -1,0 +1,111 @@
+---
+alias: BlueKit CLI Architecture
+description: Architecture diagram showing the flow from user commands through oclif framework, command handlers, MCP client communication via JSON-RPC, and MCP server interaction
+tags:
+  - architecture
+  - cli
+  - mcp
+  - oclif
+  - json-rpc
+---
+```mermaid
+graph TB
+    subgraph User["👤 User"]
+        CLI[bluekit command]
+    end
+    
+    subgraph Entry["🚀 Entry Point"]
+        BinRun[bin/run]
+        Index[src/index.ts<br/>oclif execute]
+    end
+    
+    subgraph Commands["📋 Commands"]
+        Init[init.ts<br/>Initialize project]
+        Magic[magic.ts<br/>Create .magic.md]
+        Ping[ping.ts<br/>Health check]
+    end
+    
+    subgraph Core["⚙️ Core Modules"]
+        MCPClient[mcpClient.ts<br/>JSON-RPC client]
+        Config[config.ts<br/>Path resolution]
+        Types[types.ts<br/>Type definitions]
+    end
+    
+    subgraph ConfigSystem["⚙️ Config Resolution"]
+        ProjectConfig[Project bluekit.config.json]
+        GlobalConfig[~/.bluekit/config.json]
+        AutoDiscovery[Auto-discovery<br/>Find MCP server]
+    end
+    
+    subgraph MCPComm["🔌 MCP Communication"]
+        SpawnProcess[Spawn MCP Server Process]
+        InitRequest[Initialize Request]
+        ToolCall[Tool Call Request]
+        Response[Response Handler]
+    end
+    
+    subgraph MCPServer["🖥️ MCP Server"]
+        MCPServerProcess[MCP Server Process<br/>stdio JSON-RPC]
+        ServerTools[Server Tools<br/>init_project, ping, magic, etc.]
+    end
+    
+    subgraph FileSystem["📁 File System"]
+        ProjectDir[Project Directory]
+        BlueKitDir[~/.bluekit]
+    end
+
+    CLI -->|executes| BinRun
+    BinRun -->|requires| Index
+    Index -->|routes| Commands
+    
+    Init -->|uses| MCPClient
+    Magic -->|uses| MCPClient
+    Ping -->|uses| MCPClient
+    
+    MCPClient -->|uses| Config
+    MCPClient -->|uses| Types
+    Config -->|resolves| ConfigSystem
+    
+    ConfigSystem -->|checks| ProjectConfig
+    ConfigSystem -->|falls back to| GlobalConfig
+    ConfigSystem -->|if not found| AutoDiscovery
+    
+    MCPClient -->|spawns| SpawnProcess
+    SpawnProcess -->|creates| MCPServerProcess
+    SpawnProcess -->|sends| InitRequest
+    InitRequest -->|to| MCPServerProcess
+    MCPServerProcess -->|responds| Response
+    Response -->|handles| MCPClient
+    MCPClient -->|sends| ToolCall
+    ToolCall -->|to| MCPServerProcess
+    MCPServerProcess -->|executes| ServerTools
+    ServerTools -->|reads/writes| FileSystem
+    
+    FileSystem -->|accesses| ProjectDir
+    FileSystem -->|accesses| BlueKitDir
+    
+    ServerTools -->|returns| Response
+    Response -->|to| MCPClient
+    MCPClient -->|returns| Commands
+    Commands -->|outputs| CLI
+
+    %% Define classes using colors from BlueKit palette
+    classDef userGroup fill:#1e3a8a,stroke:#4287f5,stroke-width:2px
+    classDef entryGroup fill:#0f766e,stroke:#4287f5,stroke-width:2px
+    classDef commandGroup fill:#6b21a8,stroke:#4287f5,stroke-width:2px
+    classDef coreGroup fill:#c2410c,stroke:#4287f5,stroke-width:2px
+    classDef configGroup fill:#4c1d95,stroke:#4287f5,stroke-width:2px
+    classDef mcpCommGroup fill:#a16207,stroke:#4287f5,stroke-width:2px
+    classDef mcpServerGroup fill:#155e75,stroke:#4287f5,stroke-width:2px
+    classDef fsGroup fill:#333,stroke:#4287f5,stroke-width:2px
+    
+    %% Assign classes to nodes
+    class CLI userGroup
+    class BinRun,Index entryGroup
+    class Init,Magic,Ping commandGroup
+    class MCPClient,Config,Types coreGroup
+    class ProjectConfig,GlobalConfig,AutoDiscovery configGroup
+    class SpawnProcess,InitRequest,ToolCall,Response mcpCommGroup
+    class MCPServerProcess,ServerTools mcpServerGroup
+    class ProjectDir,BlueKitDir fsGroup
+```
