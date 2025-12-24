@@ -130,7 +130,15 @@ export async function callMcpTool(
     let initialized = false;
 
     const timeout = setTimeout(() => {
-      mcpProcess.kill();
+      // Properly cleanup on timeout
+      if (mcpProcess.stdin && !mcpProcess.stdin.destroyed) {
+        mcpProcess.stdin.end();
+      }
+      setTimeout(() => {
+        if (!mcpProcess.killed) {
+          mcpProcess.kill();
+        }
+      }, 100);
       reject(new Error('MCP request timeout'));
     }, 30000); // 30 second timeout
 
@@ -155,7 +163,15 @@ export async function callMcpTool(
                 sendToolCall(mcpProcess, server, tool, args);
               } else if (response.error) {
                 clearTimeout(timeout);
-                mcpProcess.kill();
+                // Properly cleanup on error
+                if (mcpProcess.stdin && !mcpProcess.stdin.destroyed) {
+                  mcpProcess.stdin.end();
+                }
+                setTimeout(() => {
+                  if (!mcpProcess.killed) {
+                    mcpProcess.kill();
+                  }
+                }, 100);
                 reject(new Error(`Initialize failed: ${response.error.message || 'Unknown error'}`));
               }
               return;
@@ -164,13 +180,36 @@ export async function callMcpTool(
             // Handle tools/call response
             if (response.id === requestId) {
               clearTimeout(timeout);
-              mcpProcess.kill();
               
+              // Resolve/reject first
               if (response.error) {
                 reject(new Error(response.error.message || 'MCP error'));
               } else {
                 resolve(response.result || response);
               }
+              
+              // Then cleanup after a delay to allow any pending writes to complete
+              // The MCP server might try to send notifications or final messages
+              setTimeout(() => {
+                if (mcpProcess.stdin && !mcpProcess.stdin.destroyed) {
+                  mcpProcess.stdin.end();
+                }
+                // Give process time to finish writing and exit naturally
+                // Only kill if it's still running after a reasonable delay
+                setTimeout(() => {
+                  if (!mcpProcess.killed && mcpProcess.exitCode === null) {
+                    // Process is still running, force kill
+                    mcpProcess.kill('SIGTERM');
+                    // If still not dead after another delay, force kill
+                    setTimeout(() => {
+                      if (!mcpProcess.killed && mcpProcess.exitCode === null) {
+                        mcpProcess.kill('SIGKILL');
+                      }
+                    }, 500);
+                  }
+                }, 300);
+              }, 100); // Delay before closing stdin to allow pending writes
+              
               return;
             }
           } catch (e) {
@@ -180,17 +219,57 @@ export async function callMcpTool(
       }
     });
 
-    // Handle stderr
-    mcpProcess.stderr.on('data', (data: Buffer) => {
-      // Log stderr for debugging, but don't fail on it
-      console.error(`MCP stderr: ${data.toString()}`);
+    // Handle stdout errors (EPIPE is expected when closing)
+    mcpProcess.stdout.on('error', (err: any) => {
+      // Ignore EPIPE errors - they're expected when closing the stream
+      if (err.code !== 'EPIPE') {
+        console.error(`MCP stdout error: ${err.message}`);
+      }
     });
 
-    // Handle process errors
-    mcpProcess.on('error', (err) => {
+    // Handle stderr
+    mcpProcess.stderr.on('data', (data: Buffer) => {
+      const message = data.toString();
+      // Filter out EPIPE errors - they're expected when closing streams
+      if (!message.includes('EPIPE') && !message.includes('write EPIPE')) {
+        // Log stderr for debugging, but don't fail on it
+        console.error(`MCP stderr: ${message}`);
+      }
+    });
+
+    // Handle stderr errors (EPIPE is expected when closing)
+    mcpProcess.stderr.on('error', (err: any) => {
+      // Ignore EPIPE errors - they're expected when closing the stream
+      if (err.code !== 'EPIPE') {
+        console.error(`MCP stderr error: ${err.message}`);
+      }
+    });
+
+    // Handle process errors (but ignore EPIPE which is expected when closing)
+    mcpProcess.on('error', (err: any) => {
+      // Ignore EPIPE errors - they happen when we close stdin while server is writing
+      if (err.code === 'EPIPE') {
+        return;
+      }
       clearTimeout(timeout);
       reject(new Error(`Failed to spawn MCP server: ${err.message}`));
     });
+
+    // Handle process exit - ignore errors on exit as they're often EPIPE
+    mcpProcess.on('exit', (code, signal) => {
+      // Process exited, cleanup timeout if still active
+      clearTimeout(timeout);
+    });
+
+    // Handle stdin errors gracefully (EPIPE is expected when closing)
+    if (mcpProcess.stdin) {
+      mcpProcess.stdin.on('error', (err: any) => {
+        // Ignore EPIPE errors - they're expected when closing the stream
+        if (err.code !== 'EPIPE') {
+          console.error(`MCP stdin error: ${err.message}`);
+        }
+      });
+    }
 
     // Send initialize request
     const initRequest = {
